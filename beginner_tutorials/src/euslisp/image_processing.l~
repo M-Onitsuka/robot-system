@@ -1,0 +1,29 @@
+#!/usr/bin/env roseus
+
+(ros::load-ros-manifest "roseus")
+(ros::load-ros-manifest "jsk_recognition_msgs")
+(ros::load-ros-manifest "image_view2")
+
+(ros::roseus "test")
+
+(load "irteus/demo/sample-robot-model.l")
+(setq *robot* (instance sample-robot :init))
+(send *robot* :reset-pose)
+(objects (list *robot*))
+
+(setq *msg* nil)
+(defun color-cb (msg)
+  (print msg)
+  (ros::ros-info ";; x ~A, y ~A, z ~A, h ~A, a ~A"
+		 (send msg :rect :x)
+		 (send msg :rect :y)
+		 (send msg :rect :z)
+		 (send msg :rect :height)
+		 (send msg :rect :angle))
+  (setq *msg* msg)
+  (let ((mrk (instance image_view2::ImageMarkar2 :init)))
+    (send mrk :type image_view2::ImageMarkar2::*POINTS*)
+    (send mrk :points (list (instance geometry_msgs::Point :init
+				     :x (send msg :rect :x)
+				     :y (send msg :rect :y))))
+    (send mrk :lifetime (ros::Time 1))

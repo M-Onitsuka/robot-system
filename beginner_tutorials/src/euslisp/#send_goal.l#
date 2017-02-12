@@ -1,0 +1,36 @@
+#!/usr/bin/env roseus
+
+(ros::load-ros-manifest "roseus")
+;;(ros::load-ros-manifest "actionlib")
+(ros::load-ros-manifest "move_base_msgs")
+
+(ros::roseus "send_goal")
+(defun send-goal-client nil
+  (let (goal)
+    (if (not (boundp '*c*))
+	(setq *c* (instance ros::simple-action-client :init
+			"move_base" move_base_msgs::MoveBaseAction)))
+    ;;rosのactionlib-clientをたてて，move_baseというトピック名に対し
+    ;;move_base_msgs::MoveBaseActionという型のメッセージを送る
+    (send *c* :wait-for-server)
+    
+    (setq goal (instance move_base_msgs::MoveBaseActionGoal :init)) ;;MoveBaseActionGoalにしないとやばい←調べづらい
+    (send goal :goal :target_pose :header :stamp (ros::time-now));;stampにはros::time-nowを渡す
+    (send goal :goal :target_pose :header :frame_id "/map") ;;move_base_msgs::MoveBaseGoalの中にはさらにros::goalのインスタンスが存在している(気づきにくい)
+    (send goal :goal :target_pose :pose :position :x 2)
+    (send goal :goal :target_pose :pose :position :y 2)
+    (send goal :goal :target_pose :pose :orientation :z (sin (deg2rad 60)))
+    (send goal :goal :target_pose :pose :orientation :w (cos (deg2rad 60)))
+    (send *c* :send-goal goal)
+    
+    (warning-message 2 ";; ~A wait-for-result~%" (unix::getpid))
+    (send *c* :wait-for-result)
+    (warning-message 2 ";; ~A result -> ~A" (unix::getpid) (send *c* :get-result))
+    (send *c* :get-result)
+    ))
+
+(send-goal-client)
+
+#|
+rosのwikiはとても読みづらい構造をしているとおもう
+|#
